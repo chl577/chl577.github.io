@@ -29,31 +29,6 @@
   
   
   <entry>
-    <title>测试文章</title>
-    <link href="/2025/04/15/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0/"/>
-    <url>/2025/04/15/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0/</url>
-    
-    <content type="html"><![CDATA[<p>这是一个测试文章1111111222<br><img src="/images/test.png" alt="图片标题"></p><p><img src="/images/test2.png" alt="图片标题2"></p><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs json"><span class="hljs-punctuation">&#123;</span><span class="hljs-attr">&quot;ad&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">123</span><span class="hljs-punctuation">&#125;</span><br></code></pre></td></tr></table></figure>]]></content>
-    
-    
-    <categories>
-      
-      <category>test</category>
-      
-    </categories>
-    
-    
-    <tags>
-      
-      <tag>测试</tag>
-      
-    </tags>
-    
-  </entry>
-  
-  
-  
-  <entry>
     <title>Hello World</title>
     <link href="/2025/04/15/hello-world/"/>
     <url>/2025/04/15/hello-world/</url>
