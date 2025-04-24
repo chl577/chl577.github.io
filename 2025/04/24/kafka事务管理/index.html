@@ -1,0 +1,732 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="chenghl">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="在实际数据处理中，consume-transform-producer，是一种常见的典型场景。 在使用Kafka时，需要确保Exactly-Once语义 {精确一次}。 Kafka 0.11版本以后，引入了一项重大特性：幂等性和事务。 幂等性（幂等性只能保证的是在单分区单会话内不重复。 ） Producer 的幂等性指的是当发送同一条消息时，数据在 Server 端只会被持久化一次，数据不丟不重">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kafka事务管理">
+<meta property="og:url" content="http://example.com/2025/04/24/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%86/index.html">
+<meta property="og:site_name" content="知识的殿堂">
+<meta property="og:description" content="在实际数据处理中，consume-transform-producer，是一种常见的典型场景。 在使用Kafka时，需要确保Exactly-Once语义 {精确一次}。 Kafka 0.11版本以后，引入了一项重大特性：幂等性和事务。 幂等性（幂等性只能保证的是在单分区单会话内不重复。 ） Producer 的幂等性指的是当发送同一条消息时，数据在 Server 端只会被持久化一次，数据不丟不重">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%861.png">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%862.png">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%863.png">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%864.png">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%865.png">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%866.png">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%867.png">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%868.png">
+<meta property="og:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%869.png">
+<meta property="article:published_time" content="2025-04-24T06:34:20.000Z">
+<meta property="article:modified_time" content="2025-04-24T06:38:12.582Z">
+<meta property="article:author" content="chenghl">
+<meta property="article:tag" content="kafka事务管理">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%861.png">
+  
+  
+  
+  <title>kafka事务管理 - 知识的殿堂</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>知识的殿堂</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="kafka事务管理"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2025-04-24 14:34" pubdate>
+          2025年4月24日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          1.8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          15 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">kafka事务管理</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>在实际数据处理中，consume-transform-producer，是一种常见的典型场景。</p>
+<p><font style="color:rgb(0, 0, 0);">在使用Kafka时，需要确保Exactly-Once语义 {</font><font style="color:#DF2A3F;">精确一次</font><font style="color:rgb(0, 0, 0);">}。</font> Kafka 0.11版本以后，引入了一项重大特性：<font style="color:#DF2A3F;">幂等性和事务</font>。</p>
+<h1 id="幂等性（幂等性只能保证的是在单分区单会话内不重复。-）"><a href="#幂等性（幂等性只能保证的是在单分区单会话内不重复。-）" class="headerlink" title="幂等性（幂等性只能保证的是在单分区单会话内不重复。 ）"></a>幂等性（幂等性只能保证的是在单分区单会话内不重复。 ）</h1><p> <font style="color:rgb(68, 68, 68);">Producer 的幂等性指的是当发送同一条消息时，数据在 Server 端只会被持久化一次，数据不丟不重</font> </p>
+<p><font style="color:rgb(68, 68, 68);">要做到幂等性，要解决下面的问题：</font></p>
+<p><font style="color:rgb(68, 68, 68);">1、系统需要有能力鉴别一条数据到底是不是重复的数据？   PID</font></p>
+<p><font style="color:rgb(68, 68, 68);">2、唯一键应该选择什么粒度？ 分区</font></p>
+<p><font style="color:rgb(68, 68, 68);"></font></p>
+<p><font style="color:rgb(0, 0, 0);">Kafka为了实现幂等性，它在底层设计架构中引入了ProducerID和SequenceNumber。</font></p>
+<ul>
+<li><font style="color:rgb(0, 0, 0);">PID：在每个新的Producer初始化时，会被分配一个唯一的PID，这个PID对客户端使用者是不可见的。</font></li>
+<li><font style="color:rgb(0, 0, 0);">SequenceNumber：对于每个PID，Producer发送数据的每个Topic和Partition都对应一个从0开始单调递增的SequenceNumber值。</font></li>
+</ul>
+<p><font style="color:rgb(0, 0, 0);"></font></p>
+<h2 id="申请PID"><a href="#申请PID" class="headerlink" title="申请PID"></a><font style="color:rgb(0, 0, 0);">申请PID</font></h2><p>由服务端向zk申请</p>
+<p>zk（<font style="color:rgb(68, 68, 68);background-color:rgb(247, 248, 248);">&#x2F;latest_producer_id_block）</font>信息如下：</p>
+<p>{“version”:1,”broker”:35,”block_start”:”0”,”block_end”:”999”}</p>
+<p> 重复数据的判断标准：具有相同主键的消息提交时，Broker只会持久化一条。其中PID是Kafka每次重启都会分配一个新的；Partition 表示分区号；Sequence Number是单调自增的。 </p>
+<p><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%861.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="开启幂等性"><a href="#开启幂等性" class="headerlink" title="开启幂等性"></a>开启幂等性</h2><p> 开启参数 enable.idempotence 默认为 true，false 关闭。  </p>
+<h3 id="retries-0"><a href="#retries-0" class="headerlink" title="retries&gt;0"></a>retries&gt;0</h3><p>重试次数要大于0</p>
+<h3 id="ack-1"><a href="#ack-1" class="headerlink" title="ack&#x3D;-1"></a>ack&#x3D;-1</h3><p><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%862.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%863.png" srcset="/img/loading.gif" lazyload><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%864.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%865.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%866.png" srcset="/img/loading.gif" lazyload></p>
+<h3 id="max-in-flight-requests-per-connecrtion"><a href="#max-in-flight-requests-per-connecrtion" class="headerlink" title="max.in.flight.requests.per.connecrtion &lt;&#x3D;5"></a>max.in.flight.requests.per.connecrtion &lt;&#x3D;5</h3><p> kafka在1.x及以后版本保证数据单分区有序，条件如下： </p>
+<p> （1）未开启幂等性 max.in.flight.requests.per.connection需要设置为1。 </p>
+<p>（2）开启幂等性 max.in.flight.requests.per.connection需要设置小于等于5。原因说明：因为在kafka1.x以后，启用幂等后，kafka服务端会缓存producer发来的最近5个request的元数据，故无论如何，都可以保证最近5个request的数据都是有序的。  </p>
+<p><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%867.png" srcset="/img/loading.gif" lazyload></p>
+<h1 id="事务管理"><a href="#事务管理" class="headerlink" title="事务管理"></a>事务管理</h1><p><font style="color:rgb(0, 0, 0);">与幂等性有关的另外一个特性就是事务。Kafka中的事务与数据库的事务类似，Kafka中的事务属性是指一系列的Producer生产消息和消费消息提交Offsets的操作在一个事务中，即原子性操作。对应的结果是同时成功或者同时失败。</font></p>
+<p><font style="color:rgb(0, 0, 0);">这里需要与数据库中事务进行区别，操作数据库中的事务指一系列的增删查改，对Kafka来说，操作事务是指一系列的生产和消费等原子性操作。</font></p>
+<p><font style="color:rgb(0, 0, 0);"></font></p>
+<p><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%868.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/images/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%869.png" srcset="/img/loading.gif" lazyload></p>
+<h3 id="Client-端事务状态管理"><a href="#Client-端事务状态管理" class="headerlink" title="Client 端事务状态管理"></a><font style="color:rgb(79, 79, 79);">Client 端事务状态管理</font></h3><p><font style="color:rgb(77, 77, 77);">Client 的事务状态信息主要记录本地事务的状态，当然跟其他的系统类似，本地的状态信息与 Server 端的状态信息并不完全一致（状态的设置，就像 GroupCoodinator 会维护一个 Group 的状态，每个 Consumer 也会维护本地的 Consumer 对象的状态一样）。Client 端的事务状态信息主要用于 Client 端的事务状态处理，其主要有以下几种：</font></p>
+<ol>
+<li><font style="color:rgb(51, 51, 51);">UNINITIALIZED：Transactional Producer 初始化时的状态，此时还没有事务处理；</font></li>
+<li><font style="color:rgb(51, 51, 51);">INITIALIZING：Transactional Producer 调用 </font><font style="color:rgb(51, 51, 51);">initTransactions()</font><font style="color:rgb(51, 51, 51);"> 方法初始化事务相关的内容，比如发送 InitProducerIdRequest 请求；</font></li>
+<li><font style="color:rgb(51, 51, 51);">READY：对于新建的事务，Transactional Producer 收到来自 TransactionCoordinator 的 InitProducerIdResponse 后，其状态会置为 READY（对于已有的事务而言，是当前事务完成后 Client 的状态会转移为 READY）；</font></li>
+<li><font style="color:rgb(51, 51, 51);">IN_TRANSACTION：Transactional Producer 调用 </font><font style="color:rgb(51, 51, 51);">beginTransaction()</font><font style="color:rgb(51, 51, 51);"> 方法，开始一个事务，标志着一个事务开始初始化；</font></li>
+<li><font style="color:rgb(51, 51, 51);">COMMITTING_TRANSACTION：Transactional Producer 调用 </font><font style="color:rgb(51, 51, 51);">commitTransaction()</font><font style="color:rgb(51, 51, 51);"> 方法时，会先更新本地的状态信息；</font></li>
+<li><font style="color:rgb(51, 51, 51);">ABORTING_TRANSACTION：Transactional Producer 调用 </font><font style="color:rgb(51, 51, 51);">abortTransaction()</font><font style="color:rgb(51, 51, 51);"> 方法时，会先更新本地的状态信息；</font></li>
+<li><font style="color:rgb(51, 51, 51);">ABORTABLE_ERROR：在一个事务操作中，如果有数据发送失败，本地状态会转移到这个状态，之后再自动 abort 事务；</font></li>
+<li><font style="color:rgb(51, 51, 51);">FATAL_ERROR：转移到这个状态之后，再进行状态转移时，会抛出异常；</font></li>
+</ol>
+<h2 id="Finding-a-TransactionCoordinator"><a href="#Finding-a-TransactionCoordinator" class="headerlink" title="Finding a TransactionCoordinator"></a>Finding a TransactionCoordinator</h2><p>对于事务性的处理，第一步首先需要做的就是找到这个事务 txn.id 对应的 TransactionCoordinator，Transaction Producer 会向 Broker （随机选择一台 broker，一般选择本地连接最少的这台 broker）发送 FindCoordinatorRequest 请求，获取其 TransactionCoordinator。</p>
+<h2 id="Getting-a-PID"><a href="#Getting-a-PID" class="headerlink" title="Getting a PID"></a><font style="color:rgb(79, 79, 79);">Getting a PID</font></h2><p>开启幂等性后，生产者与broker建立会话时，会去请求一个PID【该id对于生产者是透明的】</p>
+<p>transactionCoordinator会去记录txn.id与PID的关系并持久化到事务日志中。</p>
+<p><font style="color:rgb(77, 77, 77);"></font></p>
+<p><font style="color:rgb(77, 77, 77);">校验事务状态</font></p>
+<ol>
+<li><font style="color:rgb(51, 51, 51);">如果这个 txn.id 之前没有相应的事务状态（new txn.id），那么会初始化其事务 meta 信息 TransactionMetadata（会给其分配一个 PID，初始的 epoch 为-1），如果有事务状态，获取之前的状态；</font></li>
+<li><font style="color:rgb(51, 51, 51);">校验其 TransactionMetadata 的状态信息（参考下面代码中 </font><font style="color:rgb(51, 51, 51);">prepareInitProduceIdTransit()</font><font style="color:rgb(51, 51, 51);"> 方法）：</font><ol>
+<li><font style="color:rgb(51, 51, 51);">如果前面还有状态转移正在进行，直接返回 CONCURRENT_TRANSACTIONS 异常；</font></li>
+<li><font style="color:rgb(51, 51, 51);">如果此时的状态为 PrepareAbort 或 PrepareCommit，返回 CONCURRENT_TRANSACTIONS 异常；</font></li>
+<li><font style="color:rgb(51, 51, 51);">如果之前的状态为 CompleteAbort、CompleteCommit 或 Empty，那么先将状态转移为 Empty，然后更新一下 epoch 值；</font></li>
+<li><font style="color:rgb(51, 51, 51);">如果之前的状态为 Ongoing，状态会转移成 PrepareEpochFence，然后再 abort 当前的事务，并向 client 返回 CONCURRENT_TRANSACTIONS 异常；</font></li>
+<li><font style="color:rgb(51, 51, 51);">如果状态为 Dead 或 PrepareEpochFence，直接抛出相应的 FATAL 异常；</font></li>
+</ol>
+</li>
+</ol>
+<h2 id="Starting-a-Transaction"><a href="#Starting-a-Transaction" class="headerlink" title="Starting a Transaction"></a><font style="color:rgb(79, 79, 79);">Starting a Transaction</font></h2><p>生产者开启事务，此时并没有和服务端进行交互。</p>
+<h2 id="Consume-Porcess-Produce-Loop"><a href="#Consume-Porcess-Produce-Loop" class="headerlink" title="Consume-Porcess-Produce Loop"></a><font style="color:rgb(79, 79, 79);">Consume-Porcess-Produce Loop</font></h2><p>处理数据</p>
+<p>发送数据时，生产者会将txn.id与目标主题分区发送给transactionCoordinator，transactionCoordinator会将其持久化到事务日志中。</p>
+<h2 id="Committing-or-Aborting-a-Transaction"><a href="#Committing-or-Aborting-a-Transaction" class="headerlink" title="Committing or Aborting a Transaction"></a><font style="color:rgb(79, 79, 79);">Committing or Aborting a Transaction</font></h2><p>生产者提交或终止事务</p>
+<p>transactionCoordinator会将事务状态更新为提交或终止</p>
+<p>transactionCoordinator会去将对应的事务提交信息同步给主题分区，并将事务内对应的数据更新为提交或终止</p>
+<h1 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h1><h2 id="txn-id-是否可以被多-Producer-使用，如果有多个-Producer-使用了这个-txn-id-会出现什么问题？"><a href="#txn-id-是否可以被多-Producer-使用，如果有多个-Producer-使用了这个-txn-id-会出现什么问题？" class="headerlink" title="txn.id 是否可以被多 Producer 使用，如果有多个 Producer 使用了这个 txn.id 会出现什么问题？"></a><font style="color:rgb(51, 51, 51);">txn.id 是否可以被多 Producer 使用，如果有多个 Producer 使用了这个 txn.id 会出现什么问题？</font></h2><p>脑裂问题</p>
+<p><font style="color:rgb(77, 77, 77);">如果多个 Producer 共用一个 txn.id，那么最后启动的 Producer 会成功运行，会它之前启动的 Producer 都 Fencing 掉</font></p>
+<p><font style="color:rgb(77, 77, 77);"></font></p>
+<h2 id="Consumer-端如何消费事务数据"><a href="#Consumer-端如何消费事务数据" class="headerlink" title="Consumer 端如何消费事务数据"></a><font style="color:rgb(79, 79, 79);">Consumer 端如何消费事务数据</font></h2><p><font style="color:rgb(77, 77, 77);">Consumer 的消费策略，Consumer 有一个 isolation.level 配置</font></p>
+<p><font style="color:rgb(51, 51, 51);">read_committed：只能读到已提交的数据</font></p>
+<p><font style="color:rgb(51, 51, 51);">read_uncommitted：可以读到全部数【包括未提交的数据】</font></p>
+<p><font style="color:rgb(51, 51, 51);"></font></p>
+<h2 id="如果-txn-id-长期不使用，server-端怎么处理？"><a href="#如果-txn-id-长期不使用，server-端怎么处理？" class="headerlink" title="如果 txn.id 长期不使用，server 端怎么处理？"></a><font style="color:rgb(79, 79, 79);">如果 txn.id 长期不使用，server 端怎么处理？</font></h2><p><font style="color:rgb(77, 77, 77);">Producer 在开始一个事务操作时，可以设置其事务超时时间（参数是 </font><font style="color:rgb(77, 77, 77);">transaction.timeout.ms</font><font style="color:rgb(77, 77, 77);">，默认60s），而且 Server 端还有一个最大可允许的事务操作超时时间（参数是 </font><font style="color:rgb(77, 77, 77);">transaction.timeout.ms</font><font style="color:rgb(77, 77, 77);">，默认是15min），Producer 设置超时时间不能超过 Server，否则的话会抛出异常。</font></p>
+<p><font style="color:rgb(77, 77, 77);">我们知道 TransactionCoordinator 会缓存 txn.id 的相关信息，如果没有超时机制，这个 meta 大小是无法预估的，Server 端提供了一个 transaction.id.expiration.ms 参数来配置这个超时时间（默认是7天），如果超过这个时间没有任何事务相关的请求发送过来，那么 TransactionCoordinator 将会使这个 txn.id 过期。</font></p>
+<p><font style="color:rgb(77, 77, 77);"></font></p>
+<h2 id="transactionCoordinator挂了怎么办？"><a href="#transactionCoordinator挂了怎么办？" class="headerlink" title="transactionCoordinator挂了怎么办？"></a>transactionCoordinator挂了怎么办？</h2><p>min.isr + ack</p>
+<h2 id="为何需要引入txn-id？"><a href="#为何需要引入txn-id？" class="headerlink" title="为何需要引入txn.id？"></a>为何需要引入txn.id？</h2><p>PID每次重启都会改变，无法根据PID查询未完成的事务</p>
+<h2 id="为何真正的提交要由transactionCoordinator来告知主题分区？"><a href="#为何真正的提交要由transactionCoordinator来告知主题分区？" class="headerlink" title="为何真正的提交要由transactionCoordinator来告知主题分区？"></a>为何真正的提交要由transactionCoordinator来告知主题分区？</h2><p>减轻生产者的压力</p>
+<p>幂等性：<a target="_blank" rel="noopener" href="https://blog.csdn.net/muyimo/article/details/91439222">https://blog.csdn.net/muyimo/article/details/91439222</a></p>
+<p>事务性：<a target="_blank" rel="noopener" href="http://matt33.com/2018/10/24/kafka-idempotent/">http://matt33.com/2018/10/24/kafka-idempotent/</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/kafka/" class="category-chain-item">kafka</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/kafka%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%86/" class="print-no-link">#kafka事务管理</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>kafka事务管理</div>
+      <div>http://example.com/2025/04/24/kafka事务管理/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>chenghl</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2025年4月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2025/04/24/xxl-job%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/" title="xxl-job原理分析">
+                        <span class="hidden-mobile">xxl-job原理分析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
