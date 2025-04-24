@@ -1,0 +1,720 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="chenghl">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="架构设计设计思想将调度行为抽象形成“调度中心”公共平台，而平台自身并不承担业务逻辑，“调度中心”负责发起调度请求。 将任务抽象成分散的JobHandler，交由“执行器”统一管理，“执行器”负责接收调度请求并执行对应的JobHandler中业务逻辑。 因此，“调度”和“任务”两部分可以相互解耦，提高系统整体稳定性和扩展性； 系统组成 调度模块（调度中心）：负责管理调度信息，按照调度配置发出调度请求">
+<meta property="og:type" content="article">
+<meta property="og:title" content="xxl-job原理分析">
+<meta property="og:url" content="http://example.com/2025/04/24/xxl-job%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="知识的殿堂">
+<meta property="og:description" content="架构设计设计思想将调度行为抽象形成“调度中心”公共平台，而平台自身并不承担业务逻辑，“调度中心”负责发起调度请求。 将任务抽象成分散的JobHandler，交由“执行器”统一管理，“执行器”负责接收调度请求并执行对应的JobHandler中业务逻辑。 因此，“调度”和“任务”两部分可以相互解耦，提高系统整体稳定性和扩展性； 系统组成 调度模块（调度中心）：负责管理调度信息，按照调度配置发出调度请求">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/images/xxljob1.png">
+<meta property="og:image" content="http://example.com/images/xxljob2.svg">
+<meta property="og:image" content="http://example.com/images/xxljob3.svg">
+<meta property="og:image" content="http://example.com/images/xxljob4.svg">
+<meta property="og:image" content="http://example.com/images/xxljob5.png">
+<meta property="og:image" content="http://example.com/images/xxljob8.png">
+<meta property="og:image" content="http://example.com/images/xxljob6.svg">
+<meta property="og:image" content="http://example.com/images/xxljob7.svg">
+<meta property="article:published_time" content="2025-04-24T06:26:00.000Z">
+<meta property="article:modified_time" content="2025-04-24T06:29:12.888Z">
+<meta property="article:author" content="chenghl">
+<meta property="article:tag" content="xxl-job">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/images/xxljob1.png">
+  
+  
+  
+  <title>xxl-job原理分析 - 知识的殿堂</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>知识的殿堂</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="xxl-job原理分析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2025-04-24 14:26" pubdate>
+          2025年4月24日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.4k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          21 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">xxl-job原理分析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="架构设计"><a href="#架构设计" class="headerlink" title="架构设计"></a>架构设计</h2><h3 id="设计思想"><a href="#设计思想" class="headerlink" title="设计思想"></a>设计思想</h3><p><font style="color:rgb(51, 51, 51);">将调度行为抽象形成“调度中心”公共平台，而平台自身并不承担业务逻辑，“调度中心”负责发起调度请求。</font></p>
+<p><font style="color:rgb(51, 51, 51);">将任务抽象成分散的JobHandler，交由“执行器”统一管理，“执行器”负责接收调度请求并执行对应的JobHandler中业务逻辑。</font></p>
+<p><font style="color:rgb(51, 51, 51);">因此，“调度”和“任务”两部分可以相互解耦，提高系统整体稳定性和扩展性；</font></p>
+<h3 id="系统组成"><a href="#系统组成" class="headerlink" title="系统组成"></a><font style="color:rgb(51, 51, 51);">系统组成</font></h3><ul>
+<li><strong><font style="color:rgb(51, 51, 51);">调度模块（调度中心）</font></strong><font style="color:rgb(51, 51, 51);">：<br></font><font style="color:rgb(51, 51, 51);">负责管理调度信息，按照调度配置发出调度请求，自身不承担业务代码。调度系统与任务解耦，提高了系统可用性和稳定性，同时调度系统性能不再受限于任务模块；<br></font><font style="color:rgb(51, 51, 51);">支持可视化、简单且动态的管理调度信息。</font></li>
+<li><strong><font style="color:rgb(51, 51, 51);">执行模块（执行器）</font></strong><font style="color:rgb(51, 51, 51);">：<br></font><font style="color:rgb(51, 51, 51);">负责接收调度请求并执行任务逻辑。任务模块专注于任务的执行等操作，开发和维护更加简单和高效；<br></font><font style="color:rgb(51, 51, 51);">接收“调度中心”的执行请求、终止请求和日志请求等。</font></li>
+</ul>
+<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a><font style="color:rgb(51, 51, 51);">架构图</font></h3><p><img src="/images/xxljob1.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="各模块剖析"><a href="#各模块剖析" class="headerlink" title="各模块剖析"></a>各模块剖析</h2><h3 id="调度模块剖析"><a href="#调度模块剖析" class="headerlink" title="调度模块剖析"></a>调度模块剖析</h3><h4 id="调度中心HA（集群）"><a href="#调度中心HA（集群）" class="headerlink" title="调度中心HA（集群）"></a><font style="color:rgb(51, 51, 51);">调度中心HA（集群）</font></h4><p><font style="color:rgb(51, 51, 51);">基于数据库的集群方案，数据库选用Mysql；集群分布式并发环境中进行定时任务调度时，会在各个节点会上报任务，存到数据库中，执行时会从数据库中取出触发器来执行，如果触发器的名称和执行时间相同，则只有一个节点去执行此任务。</font></p>
+<h4 id="调度线程池"><a href="#调度线程池" class="headerlink" title="调度线程池"></a><font style="color:rgb(51, 51, 51);">调度线程池</font></h4><p><font style="color:rgb(51, 51, 51);">调度采用线程池方式实现，避免单线程因阻塞而引起任务调度延迟。</font></p>
+<h4 id="过期处理策略"><a href="#过期处理策略" class="headerlink" title="过期处理策略"></a><font style="color:rgb(51, 51, 51);">过期处理策略</font></h4><p><font style="color:rgb(51, 51, 51);">任务调度错过触发时间时的处理策略：</font></p>
+<ul>
+<li><font style="color:rgb(51, 51, 51);">可能原因：服务重启；调度线程被阻塞，线程被耗尽；上次调度持续阻塞，下次调度被错过；</font></li>
+<li><font style="color:rgb(51, 51, 51);">处理策略：</font><ul>
+<li><font style="color:rgb(51, 51, 51);">过期超5s：本次忽略，当前时间开始计算下次触发时间</font></li>
+<li><font style="color:rgb(51, 51, 51);">过期5s内：立即触发一次，当前时间开始计算下次触发时间</font></li>
+</ul>
+</li>
+</ul>
+<h4 id="任务HA（Failover）"><a href="#任务HA（Failover）" class="headerlink" title="任务HA（Failover）"></a><font style="color:rgb(51, 51, 51);">任务HA（Failover）</font></h4><p><font style="color:rgb(51, 51, 51);">执行器如若集群部署，调度中心将会感知到在线的所有执行器，如“127.0.0.1:9997, 127.0.0.1:9998, 127.0.0.1:9999”。</font></p>
+<p><font style="color:rgb(51, 51, 51);">当任务”路由策略”选择”故障转移(FAILOVER)”时，当调度中心每次发起调度请求时，会按照顺序对执行器发出心跳检测请求，第一个检测为存活状态的执行器将会被选定并发送调度请求。</font></p>
+<h4 id="全异步化-轻量级"><a href="#全异步化-轻量级" class="headerlink" title="全异步化 &amp; 轻量级"></a><font style="color:rgb(51, 51, 51);">全异步化 &amp; 轻量级</font></h4><ul>
+<li><font style="color:rgb(51, 51, 51);">全异步化设计：XXL-JOB系统中业务逻辑在远程执行器执行，触发流程全异步化设计。相比直接在调度中心内部执行业务逻辑，极大的降低了调度线程占用时间；</font><ul>
+<li><font style="color:rgb(51, 51, 51);">异步调度：调度中心每次任务触发时仅发送一次调度请求，该调度请求首先推送“异步调度队列”，然后异步推送给远程执行器</font></li>
+<li><font style="color:rgb(51, 51, 51);">异步执行：执行器会将请求存入“异步执行队列”并且立即响应调度中心，异步运行。</font></li>
+</ul>
+</li>
+<li><font style="color:rgb(51, 51, 51);">轻量级设计：XXL-JOB调度中心中每个JOB逻辑非常 “轻”，在全异步化的基础上，单个JOB一次运行平均耗时基本在 “10ms” 之内（基本为一次请求的网络开销）；因此，可以保证使用有限的线程支撑大量的JOB并发运行；</font></li>
+</ul>
+<p><font style="color:rgb(51, 51, 51);">得益于上述两点优化，理论上默认配置下的调度中心，单机能够支撑 5000 任务并发运行稳定运行；</font></p>
+<h4 id="均衡调度"><a href="#均衡调度" class="headerlink" title="均衡调度"></a><font style="color:rgb(51, 51, 51);">均衡调度</font></h4><p><font style="color:rgb(51, 51, 51);">调度中心在集群部署时会自动进行任务平均分配，触发组件每次获取与线程池数量（调度中心支持自定义调度线程池大小）相关数量的任务，避免大量任务集中在单个调度中心集群节点；</font></p>
+<h3 id="通讯模块剖析"><a href="#通讯模块剖析" class="headerlink" title="通讯模块剖析"></a><font style="color:rgb(51, 51, 51);">通讯模块剖析</font></h3><h4 id="一次完整的任务调度通讯流程"><a href="#一次完整的任务调度通讯流程" class="headerlink" title="一次完整的任务调度通讯流程"></a><font style="color:rgb(51, 51, 51);">一次完整的任务调度通讯流程</font></h4><p><font style="color:rgb(0, 102, 102);"></font><font style="color:rgb(102, 102, 0);">“调度中心”向“执行器”发送</font><font style="color:rgb(0, 0, 0);">http</font><font style="color:rgb(102, 102, 0);">调度请求:</font><font style="color:rgb(0, 0, 0);"> </font></p>
+<p><font style="color:rgb(102, 102, 0);">“执行器”中接收请求的服务，实际上是一台内嵌</font><font style="color:rgb(102, 0, 102);">Server</font><font style="color:rgb(102, 102, 0);">，默认端口</font><font style="color:rgb(0, 102, 102);">9999</font></p>
+<p><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">“执行器”执行任务逻辑；</font></p>
+<p><font style="color:rgb(0, 102, 102);"></font><font style="color:rgb(102, 102, 0);">“执行器”</font><font style="color:rgb(0, 0, 0);">http</font><font style="color:rgb(102, 102, 0);">回调“调度中心”调度结果:</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">“调度中心”中接收回调的服务，是针对执行器开放一套</font><font style="color:rgb(0, 0, 0);">API</font><font style="color:rgb(102, 102, 0);">服务;</font></p>
+<h4 id="通讯数据加密"><a href="#通讯数据加密" class="headerlink" title="通讯数据加密"></a><font style="color:rgb(51, 51, 51);">通讯数据加密</font></h4><p><font style="color:rgb(51, 51, 51);">调度中心向执行器发送的调度请求时使用RequestModel和ResponseModel两个对象封装调度请求参数和响应数据, 在进行通讯之前底层会将上述两个对象对象序列化，并进行数据协议以及时间戳检验,从而达到数据加密的功能;</font></p>
+<h4 id="任务注册-任务自动发现"><a href="#任务注册-任务自动发现" class="headerlink" title="任务注册, 任务自动发现"></a><font style="color:rgb(51, 51, 51);">任务注册, 任务自动发现</font></h4><p><font style="color:rgb(51, 51, 51);">自v1.5版本之后, 任务取消了”任务执行机器”属性, 改为通过任务注册和自动发现的方式, 动态获取远程执行器地址并执行。</font></p>
+<p><font style="color:rgb(102, 0, 102);">AppName</font><font style="color:rgb(102, 102, 0);">:</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">每个执行器机器集群的唯一标示,</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">任务注册以</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(0, 136, 0);">“执行器”</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">为最小粒度进行注册;</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">每个任务通过其绑定的执行器可感知对应的执行器机器列表;</font><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">注册表:</font><font style="color:rgb(0, 0, 0);background-color:rgb(238, 238, 238);"> </font><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">见</font><font style="color:rgb(0, 136, 0);background-color:rgb(238, 238, 238);">“xxl_job_registry”</font><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">表,</font><font style="color:rgb(0, 0, 0);background-color:rgb(238, 238, 238);"> </font><font style="color:rgb(0, 136, 0);background-color:rgb(238, 238, 238);">“执行器”</font><font style="color:rgb(0, 0, 0);background-color:rgb(238, 238, 238);"> </font><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">在进行任务注册时将会周期性维护一条注册记录，即机器地址和</font><font style="color:rgb(102, 0, 102);background-color:rgb(238, 238, 238);">AppName</font><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">的绑定关系;</font><font style="color:rgb(0, 0, 0);background-color:rgb(238, 238, 238);"> </font><font style="color:rgb(0, 136, 0);background-color:rgb(238, 238, 238);">“调度中心”</font><font style="color:rgb(0, 0, 0);background-color:rgb(238, 238, 238);"> </font><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">从而可以动态感知每个</font><font style="color:rgb(102, 0, 102);background-color:rgb(238, 238, 238);">AppName</font><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">在线的机器列表;</font><font style="color:rgb(102, 102, 0);">执行器注册:</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">任务注册</font><font style="color:rgb(102, 0, 102);">Beat</font><font style="color:rgb(102, 102, 0);">周期默认</font><font style="color:rgb(0, 102, 102);">30s</font><font style="color:rgb(102, 102, 0);">;</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">执行器以一倍</font><font style="color:rgb(102, 0, 102);">Beat</font><font style="color:rgb(102, 102, 0);">进行执行器注册,</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">调度中心以一倍</font><font style="color:rgb(102, 0, 102);">Beat</font><font style="color:rgb(102, 102, 0);">进行动态任务发现;</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);">注册信息的失效时间为三倍</font><font style="color:rgb(102, 0, 102);">Beat</font><font style="color:rgb(102, 102, 0);">;</font><font style="color:rgb(0, 0, 0);"> </font><font style="color:rgb(102, 102, 0);background-color:rgb(238, 238, 238);">执行器注册摘除：执行器销毁时，将会主动上报调度中心并摘除对应的执行器机器信息，提高心跳注册的实时性；</font></p>
+<h3 id="访问令牌（AccessToken）"><a href="#访问令牌（AccessToken）" class="headerlink" title="访问令牌（AccessToken）"></a><font style="color:rgb(51, 51, 51);">访问令牌（AccessToken）</font></h3><p><font style="color:rgb(51, 51, 51);">为提升系统安全性，调度中心和执行器进行安全性校验，双方AccessToken匹配才允许通讯；</font></p>
+<p><font style="color:rgb(51, 51, 51);">调度中心和执行器，可通过配置项 “xxl.job.accessToken” 进行AccessToken的设置。</font></p>
+<p><font style="color:rgb(51, 51, 51);">调度中心和执行器，如果需要正常通讯，只有两种设置；</font></p>
+<ul>
+<li><font style="color:rgb(51, 51, 51);">设置一：调度中心和执行器，均不设置AccessToken；关闭安全性校验；</font></li>
+<li><font style="color:rgb(51, 51, 51);">设置二：调度中心和执行器，设置了相同的AccessToken；</font></li>
+</ul>
+<h3 id="故障转移-失败重试"><a href="#故障转移-失败重试" class="headerlink" title="故障转移 &amp; 失败重试"></a><font style="color:rgb(51, 51, 51);">故障转移 &amp; 失败重试</font></h3><p><font style="color:rgb(51, 51, 51);">一次完整任务流程包括”调度（调度中心） + 执行（执行器）”两个阶段。</font></p>
+<ul>
+<li><font style="color:rgb(51, 51, 51);">“故障转移”发生在调度阶段，在执行器集群部署时，如果某一台执行器发生故障，该策略支持自动进行Failover切换到一台正常的执行器机器并且完成调度请求流程。</font></li>
+<li><font style="color:rgb(51, 51, 51);">“失败重试”发生在”调度 + 执行”两个阶段，支持通过自定义任务失败重试次数，当任务失败时将会按照预设的失败重试次数主动进行重试；</font></li>
+</ul>
+<h3 id="执行器灰度上线"><a href="#执行器灰度上线" class="headerlink" title="执行器灰度上线"></a><font style="color:rgb(51, 51, 51);">执行器灰度上线</font></h3><p><font style="color:rgb(51, 51, 51);">调度中心与业务解耦，只需部署一次后常年不需要维护。但是，执行器中托管运行着业务作业，作业上线和变更需要重启执行器，尤其是Bean模式任务。<br></font><font style="color:rgb(51, 51, 51);">执行器重启可能会中断运行中的任务。但是，XXL-JOB得益于自建执行器与自建注册中心，可以通过灰度上线的方式，避免因重启导致的任务中断的问题。</font></p>
+<p><font style="color:rgb(51, 51, 51);">步骤如下：</font></p>
+<ul>
+<li><font style="color:rgb(51, 51, 51);">1、执行器改为手动注册，下线一半机器列表（A组），线上运行另一半机器列表（B组）；</font></li>
+<li><font style="color:rgb(51, 51, 51);">2、等待A组机器任务运行结束并编译上线；执行器注册地址替换为A组；</font></li>
+<li><font style="color:rgb(51, 51, 51);">3、等待B组机器任务运行结束并编译上线；执行器注册地址替换为A组+B组；<br></font><font style="color:rgb(51, 51, 51);">操作结束；</font></li>
+</ul>
+<h3 id="任务超时控制"><a href="#任务超时控制" class="headerlink" title="任务超时控制"></a><font style="color:rgb(51, 51, 51);">任务超时控制</font></h3><p><font style="color:rgb(51, 51, 51);">支持设置任务超时时间，任务运行超时的情况下，将会主动中断任务；</font></p>
+<p><font style="color:rgb(51, 51, 51);">需要注意的是，任务超时中断时与任务终止机制。类似，也是通过 “interrupt” 中断任务，因此业务代码需要将 “InterruptedException” 外抛，否则功能不可用。</font></p>
+<h3 id="任务失败告警"><a href="#任务失败告警" class="headerlink" title="任务失败告警"></a><font style="color:rgb(51, 51, 51);">任务失败告警</font></h3><p><font style="color:rgb(51, 51, 51);">默认提供邮件失败告警，可扩展短信、钉钉等方式。如果需要新增一种告警方式，只需要新增一个实现 “com.xxl.job.admin.core.alarm.JobAlarm” 接口的告警实现即可。可以参考默认提供邮箱告警实现 “EmailJobAlarm”。</font></p>
+<h3 id="避免任务重复执行"><a href="#避免任务重复执行" class="headerlink" title="避免任务重复执行"></a><font style="color:rgb(51, 51, 51);">避免任务重复执行</font></h3><p><font style="color:rgb(51, 51, 51);">调度密集或者耗时任务可能会导致任务阻塞，集群情况下调度组件小概率情况下会重复触发；<br></font><font style="color:rgb(51, 51, 51);">针对上述情况，可以通过结合 “单机路由策略（如：第一台、一致性哈希）” + “阻塞策略（如：单机串行、丢弃后续调度）” 来规避，最终避免任务重复执行。</font></p>
+<h3 id="调度结果丢失处理"><a href="#调度结果丢失处理" class="headerlink" title="调度结果丢失处理"></a><font style="color:rgb(51, 51, 51);">调度结果丢失处理</font></h3><p><font style="color:rgb(51, 51, 51);">执行器因网络抖动回调失败或宕机等异常情况，会导致任务调度结果丢失。由于调度中心依赖执行器回调来感知调度结果，因此会导致调度日志永远处于 “运行中” 状态。</font></p>
+<p><font style="color:rgb(51, 51, 51);">针对该问题，调度中心提供内置组件进行处理，逻辑为：调度记录停留在 “运行中” 状态超过10min，且对应执行器心跳注册失败不在线，则将本地调度主动标记失败；</font></p>
+<h2 id="客户端启动流程"><a href="#客户端启动流程" class="headerlink" title="客户端启动流程"></a>客户端启动流程</h2><p><img src="/images/xxljob2.svg" srcset="/img/loading.gif" lazyload></p>
+<h2 id="服务端启动流程"><a href="#服务端启动流程" class="headerlink" title="服务端启动流程"></a>服务端启动流程</h2><p><img src="/images/xxljob3.svg" srcset="/img/loading.gif" lazyload></p>
+<h2 id="调度任务的具体流程"><a href="#调度任务的具体流程" class="headerlink" title="调度任务的具体流程"></a>调度任务的具体流程</h2><p><img src="/images/xxljob4.svg" srcset="/img/loading.gif" lazyload></p>
+<h2 id="时间轮"><a href="#时间轮" class="headerlink" title="时间轮"></a>时间轮</h2><p><img src="/images/xxljob5.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/images/xxljob8.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="执行器处理任务"><a href="#执行器处理任务" class="headerlink" title="执行器处理任务"></a>执行器处理任务</h2><p><img src="/images/xxljob6.svg" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/images/xxljob7.svg" srcset="/img/loading.gif" lazyload></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/xxl-job/" class="category-chain-item">xxl-job</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/xxl-job/" class="print-no-link">#xxl-job</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>xxl-job原理分析</div>
+      <div>http://example.com/2025/04/24/xxl-job原理分析/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>chenghl</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2025年4月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2025/04/24/RMB%E5%8E%8B%E7%BC%A9%E7%AE%97%E6%B3%95/" title="RMB压缩算法">
+                        <span class="hidden-mobile">RMB压缩算法</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
