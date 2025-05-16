@@ -19,25 +19,25 @@
   <meta name="author" content="chenghl">
   <meta name="keywords" content="">
   
-    <meta name="description" content="在“幻读有什么问题”中，讲解了间隙锁和临键锁的概念。接下来重点讲解一下加锁规则 准备隔离级别：可重复读「间隙锁只在可重复读隔离级别下生效」 123456789101112131415-- auto-generated definitioncreate table t(  id int not null  primary key,  a  int null,  b  int null);create">
+    <meta name="description" content="在幻读有什么问题？中，讲解了间隙锁和临键锁的概念。接下来重点讲解一下加锁规则 准备隔离级别：可重复读「间隙锁只在可重复读隔离级别下生效」 123456789101112131415-- auto-generated definitioncreate table t(  id int not null  primary key,  a  int null,  b  int null);create">
 <meta property="og:type" content="article">
-<meta property="og:title" content="加锁规则">
-<meta property="og:url" content="http://example.com/2025/04/30/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%99/index.html">
+<meta property="og:title" content="mysql加锁规则">
+<meta property="og:url" content="http://example.com/2025/05/16/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%99/index.html">
 <meta property="og:site_name" content="知识的殿堂">
-<meta property="og:description" content="在“幻读有什么问题”中，讲解了间隙锁和临键锁的概念。接下来重点讲解一下加锁规则 准备隔离级别：可重复读「间隙锁只在可重复读隔离级别下生效」 123456789101112131415-- auto-generated definitioncreate table t(  id int not null  primary key,  a  int null,  b  int null);create">
+<meta property="og:description" content="在幻读有什么问题？中，讲解了间隙锁和临键锁的概念。接下来重点讲解一下加锁规则 准备隔离级别：可重复读「间隙锁只在可重复读隔离级别下生效」 123456789101112131415-- auto-generated definitioncreate table t(  id int not null  primary key,  a  int null,  b  int null);create">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/images/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%991.png">
-<meta property="og:image" content="http://example.com/images/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%992.png">
-<meta property="article:published_time" content="2025-04-30T06:14:51.000Z">
-<meta property="article:modified_time" content="2025-04-30T06:17:32.408Z">
+<meta property="og:image" content="http://example.com/images/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%991.png">
+<meta property="og:image" content="http://example.com/images/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%992.png">
+<meta property="article:published_time" content="2025-05-16T09:17:20.000Z">
+<meta property="article:modified_time" content="2025-05-16T09:20:00.737Z">
 <meta property="article:author" content="chenghl">
 <meta property="article:tag" content="加锁规则">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/images/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%991.png">
+<meta name="twitter:image" content="http://example.com/images/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%991.png">
   
   
   
-  <title>加锁规则 - 知识的殿堂</title>
+  <title>mysql加锁规则 - 知识的殿堂</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -203,7 +203,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="加锁规则"></span>
+            <span id="subtitle" data-typed-text="mysql加锁规则"></span>
           
         </div>
 
@@ -214,8 +214,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2025-04-30 14:14" pubdate>
-          2025年4月30日 下午
+        <time datetime="2025-05-16 17:17" pubdate>
+          2025年5月16日 下午
         </time>
       </span>
     
@@ -274,12 +274,12 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header">加锁规则</h1>
+            <h1 id="seo-header">mysql加锁规则</h1>
             
             
               <div class="markdown-body">
                 
-                <p>在“幻读有什么问题”中，讲解了间隙锁和临键锁的概念。接下来重点讲解一下加锁规则</p>
+                <p>在<a target="_blank" rel="noopener" href="https://www.yuque.com/chenghl/rqnug8/vvg1kd69rk9rc2t6">幻读有什么问题？</a>中，讲解了间隙锁和临键锁的概念。接下来重点讲解一下加锁规则</p>
 <h1 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h1><p>隔离级别：可重复读「间隙锁只在可重复读隔离级别下生效」</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- auto-generated definition</span><br><span class="hljs-keyword">create table</span> t<br>(<br>  id <span class="hljs-type">int</span> <span class="hljs-keyword">not null</span><br>  <span class="hljs-keyword">primary key</span>,<br>  a  <span class="hljs-type">int</span> <span class="hljs-keyword">null</span>,<br>  b  <span class="hljs-type">int</span> <span class="hljs-keyword">null</span><br>);<br><br><span class="hljs-keyword">create</span> index a<br>    <span class="hljs-keyword">on</span> t (a);<br><br><br><span class="hljs-keyword">insert into</span> t <span class="hljs-keyword">values</span>(<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">0</span>),(<span class="hljs-number">5</span>,<span class="hljs-number">5</span>,<span class="hljs-number">5</span>),<br>(<span class="hljs-number">10</span>,<span class="hljs-number">10</span>,<span class="hljs-number">10</span>),(<span class="hljs-number">15</span>,<span class="hljs-number">15</span>,<span class="hljs-number">15</span>),(<span class="hljs-number">20</span>,<span class="hljs-number">20</span>,<span class="hljs-number">20</span>),(<span class="hljs-number">25</span>,<span class="hljs-number">25</span>,<span class="hljs-number">25</span>);<br></code></pre></td></tr></table></figure>
 
@@ -566,7 +566,7 @@
 <h3 id="解析-5"><a href="#解析-5" class="headerlink" title="解析"></a>解析</h3><p>这时，session A在遍历的时候，先访问第一个a&#x3D;10的记录。同样地，根据原则1，这里加的是 (a&#x3D;5,id&#x3D;5)到(a&#x3D;10,id&#x3D;10)这个next-key lock。</p>
 <p>然后，session A向右查找，直到碰到(a&#x3D;15,id&#x3D;15)这一行，循环才结束。根据优化2，这是一个 等值查询，向右查找到了不满足条件的行，所以会退化成(a&#x3D;10,id&#x3D;10) 到 (a&#x3D;15,id&#x3D;15)的间隙锁。</p>
 <p>也就是说，这个delete语句在索引a上的加锁范围，就是下图红色虚线中的部分。【虚线，表示开区间，即(a&#x3D;5,id&#x3D;5)和(a&#x3D;15,id&#x3D;15)这两行上都没有锁。】</p>
-<p><img src="/images/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%991.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/images/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%991.png" srcset="/img/loading.gif" lazyload></p>
 <h2 id="limit语句加锁"><a href="#limit语句加锁" class="headerlink" title="limit语句加锁"></a>limit语句加锁</h2><table>
 <thead>
 <tr>
@@ -586,7 +586,7 @@
 <h3 id="解析-6"><a href="#解析-6" class="headerlink" title="解析"></a>解析</h3><p>这个例子里，session A的delete语句加了 limit 2。你知道表t里a&#x3D;10的记录其实只有两条，因此 加不加limit 2，删除的效果都是一样的，但是加锁的效果却不同。可以看到，session B的insert语句执行通过了，跟案例”<font style="color:#DF2A3F;">非唯一索引存在等值</font>“的结果不同。</p>
 <p>这是因为，本案例里的delete语句明确加了limit 2的限制，因此在遍历到(a&#x3D;10, id&#x3D;30)这一行之 后，满足条件的语句已经有两条，循环就结束了。</p>
 <p>因此，索引a上的加锁范围就变成了从（a&#x3D;5,id&#x3D;5)到（a&#x3D;10,id&#x3D;30)这个前开后闭区间。</p>
-<p><img src="/images/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%992.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/images/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%992.png" srcset="/img/loading.gif" lazyload></p>
 <p>总结：在删除数据时尽量加limit。这样不仅可以控制删除数据的条数，让操作更安全，还可以减小加锁的范围。</p>
 <h2 id="一个死锁例子"><a href="#一个死锁例子" class="headerlink" title="一个死锁例子"></a>一个死锁例子</h2><p>next-key lock实际上是间隙锁和行锁加起来的结果。</p>
 <table>
@@ -666,8 +666,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>加锁规则</div>
-      <div>http://example.com/2025/04/30/加锁规则/</div>
+      <div>mysql加锁规则</div>
+      <div>http://example.com/2025/05/16/mysql加锁规则/</div>
     </div>
     <div class="license-meta">
       
@@ -679,7 +679,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2025年4月30日</div>
+          <div>2025年5月16日</div>
         </div>
       
       
@@ -711,9 +711,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2025/05/16/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%99/" title="mysql加锁规则">
+                      <a href="/2025/05/16/mysql%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2/" title="mysql怎么保证数据不丢">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">mysql加锁规则</span>
+                        <span class="hidden-mobile">mysql怎么保证数据不丢</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -721,8 +721,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2025/04/29/%E5%B9%BB%E8%AF%BB%E6%9C%89%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98/" title="幻读有什么问题">
-                        <span class="hidden-mobile">幻读有什么问题</span>
+                      <a href="/2025/04/30/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%99/" title="加锁规则">
+                        <span class="hidden-mobile">加锁规则</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

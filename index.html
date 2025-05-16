@@ -229,6 +229,128 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
+        <a href="/2025/05/16/mysql%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2/" target="_self">
+          mysql怎么保证数据不丢
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2025/05/16/mysql%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2/" target="_self">
+        <div>
+          binlog写入机制binlog写入逻辑事务执行过程中，先把日志写到binlog cache，事务提交的时候，再把binlog cache写到binlog文件中。 一个事务的binlog是不能被拆开的，因此不论这个事务多大，也要确保一次性写入。这就涉及到了binlog cache的保存问题。 系统给binlog cache分配了一片内存，每个线程一个，参数 binlog_cache_size用于控
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2025-05-16 17:21" pubdate>
+              2025-05-16
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/mysql%E6%95%B0%E6%8D%AE%E6%8C%81%E4%B9%85%E5%8C%96/">#mysql数据持久化</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2025/05/16/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%99/" target="_self">
+          mysql加锁规则
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2025/05/16/mysql%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%99/" target="_self">
+        <div>
+          在幻读有什么问题？中，讲解了间隙锁和临键锁的概念。接下来重点讲解一下加锁规则 准备隔离级别：可重复读「间隙锁只在可重复读隔离级别下生效」 123456789101112131415-- auto-generated definitioncreate table t(  id int not null  primary key,  a  int null,  b  int null);create
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2025-05-16 17:17" pubdate>
+              2025-05-16
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%99/">#加锁规则</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
         <a href="/2025/04/30/%E5%8A%A0%E9%94%81%E8%A7%84%E5%88%99/" target="_self">
           加锁规则
         </a>
